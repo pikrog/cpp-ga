@@ -78,8 +78,6 @@ def try_select(threshold, low=0.0, high=1.0):
     return roulette <= threshold
 
 
-# todo: crossover probability
-# https://github.com/ahmedfgad/GeneticAlgorithmPython/blob/master/pygad.py
 def crossover(parents, offspring_size, ga_instance: pygad.GA):
     offspring = []
     index = 0
@@ -319,45 +317,48 @@ def ga_solution(graph: igraph.Graph):
     # transform according to the solution
     euler_graph, new_edges = duplicate_edges_on_paths(graph, paths)
 
-    #############################################################
-    # output solution
-    #############################################################
-    print(f"phenotype={phenotype};\tcost={cost}")
-    print(f"edges to add: {new_edges}")
+    return euler_graph, cost, phenotype, new_edges
 
-    # plot the original and the transformed graph
-    layout = graph.layout()
-    fig, axs = pyplot.subplots(2, 1, figsize=(10, 10))
 
+def main():
+    # configure
+    graph_file = "graph.dat"
+    graph = read_graph_from_file(graph_file)
+
+    # transform
+    if is_euler_graph(graph):
+        euler_graph = graph
+
+        print("the input graph is eulerian")
+    elif is_half_euler_graph(graph):
+        euler_graph = fix_half_euler_graph(graph)
+
+        print("the input graph is half-eulerian")
+    else:
+        euler_graph, cost, phenotype, new_edges = ga_solution(graph)
+
+        print("the input graph is not eulerian")
+        print(f"phenotype={phenotype};\tcost={cost}")
+        print(f"edges to add: {new_edges}")
+
+    # find the path
+    path_vertices = fleury(euler_graph)
+
+    # output final info
+    print(f"euler path: {path_vertices}")
+
+    # plot graphs
     visual_style = {
         "vertex_label_color": "blue",
         "vertex_label": range(graph.vcount()),
         # "vertex_color": "blue",
         "vertex_size": 0.3
     }
-
+    layout = graph.layout()
+    fig, axs = pyplot.subplots(2, 1, figsize=(10, 10))
     igraph.drawing.plot(graph, layout=layout, target=axs[0], **visual_style)
     igraph.drawing.plot(euler_graph, layout=layout, target=axs[1], **visual_style)
     pyplot.show()
-    return euler_graph
-
-
-def main():
-    #############################################################
-    # find solution
-    #############################################################
-
-    # configure
-    graph_file = "graph.dat"
-    graph = read_graph_from_file(graph_file)
-
-    if is_euler_graph(graph):
-        fleury(graph)
-    elif is_half_euler_graph(graph):
-        fleury(fix_half_euler_graph(graph))
-    else:
-        euler_graph = ga_solution(graph)
-        fleury(euler_graph)
 
 
 if __name__ == "__main__":
