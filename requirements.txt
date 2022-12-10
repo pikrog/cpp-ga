@@ -1,0 +1,5 @@
+pygad
+numpy
+igraph
+random
+matplotlib

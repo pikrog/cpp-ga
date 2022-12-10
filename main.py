@@ -1,3 +1,4 @@
+from typing import Optional
 import pygad
 import numpy
 import igraph
@@ -175,22 +176,21 @@ def duplicate_edges_on_paths(graph, paths):
 
 
 def is_bridge(graph: igraph.Graph, edge: tuple[int, int]):
-    chosen_edge = graph.es.find(_source=edge[0], _target=edge[1])
-    graph.delete_edges(chosen_edge)
-    res = graph.get_all_simple_paths(edge[0], edge[1])
-    graph.add_edges([(edge[0], edge[1])])
+    edge_list = graph.get_edgelist()
+    res = graph.bridges()
+    bridges: list[tuple[int, int]] = list(map(lambda x: edge_list[x], res))
 
-    if len(res) == 0:
-        return True
-    else:
-        return False
+    for bridge in bridges:
+        if (bridge[0] == edge[0] and bridge[1] == edge[1]) or (bridge[0] == edge[1] and bridge[1] == edge[0]):
+            return True
+    return False
 
 
 def choose_edge(graph: igraph.Graph, visited_edges: list[tuple[int, int]], vertex: int) -> tuple[int, int]:
     copy: igraph.Graph = graph.copy()
-
     for i in range(len(visited_edges)):
-        copy.delete_edges(copy.es.find(_source=visited_edges[i][0], _target=visited_edges[i][1]))
+        edge_to_delete: Optional[igraph.Edge] = copy.es.find(_source=visited_edges[i][0], _target=visited_edges[i][1])
+        copy.delete_edges(edge_to_delete)
 
     all_possible_edges = list(map(lambda x: (vertex, x), graph.get_adjlist()[vertex]))
     available_non_visited_edges = list(map(lambda x: (vertex, x), copy.get_adjlist()[vertex]))
@@ -342,6 +342,26 @@ def ga_solution(graph: igraph.Graph):
     return euler_graph
 
 
+def create_random_graph(vertices: int, edge_probabilty: float, max_weight: int):
+    edges = []
+
+    for begin_vertex in range(0, vertices):
+        edge_count = 0
+        for end_vertex in range(0, vertices):
+            if edge_count > 2:
+                break
+            if begin_vertex == end_vertex:
+                continue
+            else:
+                prob = random.random()
+                if prob <= edge_probabilty:
+                    edge_count += 1
+                    weight = random.choice(range(1, max_weight))
+                    edges.append([begin_vertex, end_vertex, weight])
+
+    return edges
+
+
 def main():
     #############################################################
     # find solution
@@ -350,14 +370,17 @@ def main():
     # configure
     graph_file = "graph.dat"
     graph = read_graph_from_file(graph_file)
-
+    # path1 = create_random_graph(100, 0.2, 100)
+    # graph = make_graph(path1)
     if is_euler_graph(graph):
-        fleury(graph)
+        path = fleury(graph)
     elif is_half_euler_graph(graph):
-        fleury(fix_half_euler_graph(graph))
+        path = fleury(fix_half_euler_graph(graph))
     else:
         euler_graph = ga_solution(graph)
-        fleury(euler_graph)
+        path = fleury(euler_graph)
+
+    print("Path:", path)
 
 
 if __name__ == "__main__":
