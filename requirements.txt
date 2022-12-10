@@ -1,0 +1,5 @@
+pygad==2.18.1
+igraph==0.10.2
+numpy~=1.23.5
+matplotlib~=3.6.2
+pandas==1.5.2
