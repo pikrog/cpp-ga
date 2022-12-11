@@ -205,7 +205,7 @@ def choose_edge(graph: igraph.Graph, visited_edges: list[tuple[int, int]], verte
 def check_if_valid(graph: igraph.Graph):
     assert (graph.is_connected())
     for vertex in graph.get_adjacency():
-        assert (len(vertex) % 2 == 0)
+        assert (sum(vertex) % 2 == 0)
 
 
 def get_odd_vertices(graph: igraph.Graph):
