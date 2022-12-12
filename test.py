@@ -54,7 +54,7 @@ def test():
 
     indicators = numpy.sqrt(
         numpy.sum(
-            numpy.power(all_tests_results_array, 2) - global_min_cost**2, axis=1
+            all_tests_results_array**2 - global_min_cost**2, axis=1
         )/test_repeats
     )
     best_indicator_index = numpy.argmin(indicators)
