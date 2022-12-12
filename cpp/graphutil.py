@@ -86,7 +86,7 @@ def choose_edge(graph: igraph.Graph, visited_edges: list[tuple[int, int]], verte
 def is_graph_valid_for_fleury(graph: igraph.Graph):
     assert (graph.is_connected())
     for vertex in graph.get_adjacency():
-        assert (len(vertex) % 2 == 0)
+        assert (sum(vertex) % 2 == 0)
 
 
 def get_odd_vertices(graph: igraph.Graph):
