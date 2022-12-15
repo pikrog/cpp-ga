@@ -17,8 +17,9 @@ def main():
     # graph = read_graph_from_file(graph_file)
     graph = read_graph_from_file("./graphs/graph_small.dat")
     # path_vertices, euler_graph, graph_type, cost = auto_solve_cpp(graph)
-    solution = solve_cpp(graph)
-    print(solution)
+    for index in range(10):
+        score, vertex_path = solve_cpp(graph)
+        print(score, vertex_path)
 
     visual_style = {
         "vertex_label_color": "blue",
