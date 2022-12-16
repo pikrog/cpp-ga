@@ -1,8 +1,44 @@
-import pygad
+import igraph
 import numpy
-import random
+import pygad
 
-from cpp.matrix import OddVerticesPathMatrix
+from cpp.ga.util import mutate_by_swap, try_select
+from cpp.graphutil import GraphType, fix_half_euler_graph, duplicate_edges_on_paths, fleury, \
+    generate_random_permutations
+
+
+class OddVerticesPathMatrix:
+    def __init__(self, graph: igraph.Graph):
+        # find odd vertices
+        vertices = list(range(graph.vcount()))
+        self.__odd_vertices = list(filter(lambda v: graph.degree(v) % 2 != 0, vertices))
+        num_odd = len(self.__odd_vertices)
+
+        # initialize matrix
+        self.__min_paths = numpy.ndarray(shape=(num_odd, num_odd), dtype=tuple)
+
+        # evaluate path cost matrix
+        for i, j in numpy.ndindex(self.__min_paths.shape):
+            paths = graph.get_shortest_paths(
+                self.__odd_vertices[i],
+                to=self.__odd_vertices[j],
+                weights=graph.es["weight"],
+                output="epath"
+            )
+            path = paths[0]
+            distance = 0
+            for edge in path:
+                distance += graph.es[edge]["weight"]
+
+            self.__min_paths[i, j] = (distance, path)
+
+    @property
+    def min_paths(self):
+        return self.__min_paths
+
+    @property
+    def odd_vertices(self):
+        return self.__odd_vertices
 
 
 def _evaluate_element_indices(pair_index):
@@ -29,7 +65,7 @@ def _insert_pair(source, target, pair_index):
 
 def _fitness(matrix, solution, solution_index):
     total_cost = 0
-    for pair_index in range(int(len(solution) / 2)):
+    for pair_index in range(len(solution) // 2):
         pair_begin, pair_end = _evaluate_element_indices(pair_index)
         vertex_begin = int(solution[pair_begin])
         vertex_end = int(solution[pair_end])
@@ -39,11 +75,6 @@ def _fitness(matrix, solution, solution_index):
     return -total_cost
 
 
-def _try_select(threshold, low=0.0, high=1.0):
-    roulette = numpy.random.uniform(low=low, high=high)
-    return roulette <= threshold
-
-
 def _crossover(parents, offspring_size, ga_instance: pygad.GA):
     offspring = []
     index = 0
@@ -51,7 +82,7 @@ def _crossover(parents, offspring_size, ga_instance: pygad.GA):
         parent1 = list(parents[index % parents.shape[0], :])
         parent2 = list(parents[(index + 1) % parents.shape[0], :])
 
-        if not _try_select(threshold=ga_instance.crossover_probability):
+        if not try_select(threshold=ga_instance.crossover_probability):
             offspring.append(parent1)
             index += 1
             continue
@@ -63,23 +94,6 @@ def _crossover(parents, offspring_size, ga_instance: pygad.GA):
         index += 1
 
     return numpy.array(offspring)
-
-
-def _mutate(offspring, ga_instance: pygad.GA):
-    for chromosome_index in range(offspring.shape[0]):
-        if not _try_select(threshold=ga_instance.mutation_probability):
-            continue
-
-        gene_index_1 = numpy.random.choice(range(offspring.shape[1]))
-        gene_index_2 = numpy.random.choice(range(offspring.shape[1]))
-
-        gene_value_1 = offspring[chromosome_index, gene_index_1]
-        gene_value_2 = offspring[chromosome_index, gene_index_2]
-
-        offspring[chromosome_index, gene_index_1] = gene_value_2
-        offspring[chromosome_index, gene_index_2] = gene_value_1
-
-    return offspring
 
 
 def _interpret_ga_solution(matrix, solution):
@@ -96,13 +110,6 @@ def _interpret_ga_solution(matrix, solution):
     return paths, cost, phenotype
 
 
-def generate_random_permutations(len_permutation, num_permutations):
-    population = [list(range(len_permutation)) for _ in range(num_permutations)]
-    for solution in population:
-        random.shuffle(solution)
-    return population
-
-
 def create_template_ga_instance(
         matrix: OddVerticesPathMatrix,
         population_size=30, num_generations=100, crossover_probability=0.9, mutation_probability=0.1,
@@ -117,17 +124,40 @@ def create_template_ga_instance(
         crossover_type=_crossover,
         mutation_probability=mutation_probability,
         mutation_percent_genes="default",
-        mutation_type=_mutate,
+        mutation_type=mutate_by_swap,
         fitness_func=lambda sol, index: _fitness(matrix, sol, index),
         parent_selection_type="rws",  # roulette
         initial_population=initial_population,
         keep_elitism=2,
         keep_parents=-1,
+        gene_type=float,
         **kwargs
     )
 
 
-def find_euler_transform_by_ga(matrix: OddVerticesPathMatrix, ga_instance: pygad.GA):
+def find_euler_transform(matrix: OddVerticesPathMatrix, ga_instance: pygad.GA):
     ga_instance.run()
     paths, cost, phenotype = _interpret_ga_solution(matrix, ga_instance.best_solution())
     return paths, cost, phenotype
+
+
+def solve(
+    graph: igraph.Graph,
+    matrix: OddVerticesPathMatrix | None = None,
+    ga_instance: pygad.GA | None = None
+):
+    cost = 0
+    graph_type = GraphType.of(graph)
+    if graph_type is GraphType.euler:
+        euler_graph = graph
+    elif graph_type is GraphType.half_euler:
+        euler_graph = fix_half_euler_graph(graph)
+    else:
+        if matrix is None:
+            matrix = OddVerticesPathMatrix(graph)
+        if ga_instance is None:
+            ga_instance = create_template_ga_instance(matrix)
+        paths, cost, _ = find_euler_transform(matrix, ga_instance)
+        euler_graph, _ = duplicate_edges_on_paths(graph, paths)
+    path_vertices = fleury(euler_graph)
+    return path_vertices, euler_graph, graph_type, cost

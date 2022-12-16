@@ -176,3 +176,10 @@ def create_random_graph(vertices: int, edge_probabilty: float, max_weight: int):
                     edges.append([begin_vertex, end_vertex, weight])
 
     return edges
+
+
+def generate_random_permutations(len_permutation, num_permutations):
+    population = [list(range(len_permutation)) for _ in range(num_permutations)]
+    for solution in population:
+        random.shuffle(solution)
+    return population
