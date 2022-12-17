@@ -4,41 +4,41 @@ import pygad
 
 from cpp.ga.util import mutate_by_swap, try_select
 from cpp.graphutil import GraphType, fix_half_euler_graph, duplicate_edges_on_paths, fleury, \
-    generate_random_permutations
+    generate_random_permutations, PathMatrix
 
 
-class OddVerticesPathMatrix:
-    def __init__(self, graph: igraph.Graph):
-        # find odd vertices
-        vertices = list(range(graph.vcount()))
-        self.__odd_vertices = list(filter(lambda v: graph.degree(v) % 2 != 0, vertices))
-        num_odd = len(self.__odd_vertices)
-
-        # initialize matrix
-        self.__min_paths = numpy.ndarray(shape=(num_odd, num_odd), dtype=tuple)
-
-        # evaluate path cost matrix
-        for i, j in numpy.ndindex(self.__min_paths.shape):
-            paths = graph.get_shortest_paths(
-                self.__odd_vertices[i],
-                to=self.__odd_vertices[j],
-                weights=graph.es["weight"],
-                output="epath"
-            )
-            path = paths[0]
-            distance = 0
-            for edge in path:
-                distance += graph.es[edge]["weight"]
-
-            self.__min_paths[i, j] = (distance, path)
-
-    @property
-    def min_paths(self):
-        return self.__min_paths
-
-    @property
-    def odd_vertices(self):
-        return self.__odd_vertices
+# class OddVerticesPathMatrix:
+#     def __init__(self, graph: igraph.Graph):
+#         # find odd vertices
+#         vertices = list(range(graph.vcount()))
+#         self.__odd_vertices = list(filter(lambda v: graph.degree(v) % 2 != 0, vertices))
+#         num_odd = len(self.__odd_vertices)
+#
+#         # initialize matrix
+#         self.__min_paths = numpy.ndarray(shape=(num_odd, num_odd), dtype=tuple)
+#
+#         # evaluate path cost matrix
+#         for i, j in numpy.ndindex(self.__min_paths.shape):
+#             paths = graph.get_shortest_paths(
+#                 self.__odd_vertices[i],
+#                 to=self.__odd_vertices[j],
+#                 weights=graph.es["weight"],
+#                 output="epath"
+#             )
+#             path = paths[0]
+#             distance = 0
+#             for edge in path:
+#                 distance += graph.es[edge]["weight"]
+#
+#             self.__min_paths[i, j] = (distance, path)
+#
+#     @property
+#     def min_paths(self):
+#         return self.__min_paths
+#
+#     @property
+#     def odd_vertices(self):
+#         return self.__odd_vertices
 
 
 def _evaluate_element_indices(pair_index):
@@ -69,8 +69,8 @@ def _fitness(matrix, solution, solution_index):
         pair_begin, pair_end = _evaluate_element_indices(pair_index)
         vertex_begin = int(solution[pair_begin])
         vertex_end = int(solution[pair_end])
-        path = matrix.min_paths[vertex_begin, vertex_end]
-        total_cost += path[0]
+        cost = matrix.min_paths_costs[vertex_begin, vertex_end]
+        total_cost += cost
 
     return -total_cost
 
@@ -96,26 +96,26 @@ def _crossover(parents, offspring_size, ga_instance: pygad.GA):
     return numpy.array(offspring)
 
 
-def _interpret_ga_solution(matrix, solution):
-    genotype = [int(gene) for gene in solution[0]]
-    phenotype = [matrix.odd_vertices[v] for v in genotype]
+def _interpret_ga_solution(matrix: PathMatrix, solution):
+    genotype = [gene for gene in solution[0]]
+    phenotype = [matrix.vertices[v] for v in genotype]
     cost = -solution[1]
 
     paths = []
-    for pair_index in range(int(len(genotype) / 2)):
+    for pair_index in range(len(genotype) // 2):
         pair_begin, pair_end = _evaluate_element_indices(pair_index)
         path = matrix.min_paths[genotype[pair_begin], genotype[pair_end]]
-        paths.append(path[1])
+        paths.append(path)
 
     return paths, cost, phenotype
 
 
 def create_template_ga_instance(
-        matrix: OddVerticesPathMatrix,
+        matrix: PathMatrix,
         population_size=30, num_generations=100, crossover_probability=0.9, mutation_probability=0.1,
         **kwargs
 ):
-    num_genes = len(matrix.odd_vertices)
+    num_genes = len(matrix.vertices)
     initial_population = generate_random_permutations(num_genes, population_size)
     return pygad.GA(
         num_generations=num_generations,
@@ -130,20 +130,26 @@ def create_template_ga_instance(
         initial_population=initial_population,
         keep_elitism=2,
         keep_parents=-1,
-        gene_type=float,
+        gene_type=int,
         **kwargs
     )
 
 
-def find_euler_transform(matrix: OddVerticesPathMatrix, ga_instance: pygad.GA):
+def find_euler_transform(matrix: PathMatrix, ga_instance: pygad.GA):
     ga_instance.run()
     paths, cost, phenotype = _interpret_ga_solution(matrix, ga_instance.best_solution())
     return paths, cost, phenotype
 
 
+def create_matrix(graph: igraph.Graph):
+    vertices = list(range(graph.vcount()))
+    odd_vertices = list(filter(lambda v: graph.degree(v) % 2 != 0, vertices))
+    return PathMatrix(graph, odd_vertices)
+
+
 def solve(
     graph: igraph.Graph,
-    matrix: OddVerticesPathMatrix | None = None,
+    matrix: PathMatrix | None = None,
     ga_instance: pygad.GA | None = None
 ):
     cost = 0
@@ -154,7 +160,7 @@ def solve(
         euler_graph = fix_half_euler_graph(graph)
     else:
         if matrix is None:
-            matrix = OddVerticesPathMatrix(graph)
+            matrix = create_matrix(graph)
         if ga_instance is None:
             ga_instance = create_template_ga_instance(matrix)
         paths, cost, _ = find_euler_transform(matrix, ga_instance)

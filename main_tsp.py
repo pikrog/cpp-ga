@@ -1,7 +1,7 @@
 import sys
 
 from cpp.graphutil import read_graph_from_file
-from cpp.ga.euler import solve
+from cpp.ga.tsp import solve
 
 
 def main():
@@ -13,9 +13,9 @@ def main():
         exit(-1)
 
     graph = read_graph_from_file(graph_file)
-    path_vertices, euler_graph, graph_type, cost = solve(graph)
+    path_vertices, cost = solve(graph)
 
-    print(f"The input graph is {str(graph_type)} and the transformation cost is {cost}")
+    print(f"The best solution fitness is {cost}")
     print(f"The Postman's paths is: {path_vertices}")
     print(f"which is {len(path_vertices)} vertices")
 
