@@ -22,7 +22,7 @@ class GraphType(str, Enum):
 
 # todo: optimize evaluation (see Floyd-Warshall's algorithm)
 class PathMatrix:
-    def __init__(self, graph: igraph.Graph, vertices: list[int] | None = None):
+    def __init__(self, graph: igraph.Graph, output="epath", vertices: list[int] | None = None):
         if vertices is None:
             vertices = list(range(graph.vcount()))
         self.__vertices = vertices
@@ -57,7 +57,7 @@ class PathMatrix:
                 self.__vertices[i],
                 to=self.__vertices[j],
                 weights=graph.es["weight"],
-                output="epath"
+                output=output
             )
             path = paths[0]
             distance = 0
