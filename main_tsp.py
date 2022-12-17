@@ -15,14 +15,15 @@ def main():
     graph = read_graph_from_file(graph_file)
     matrix = create_matrix(graph)
     ga_instance = create_template_ga_instance(graph, matrix)
-    path_vertices, cost = solve(graph, matrix, ga_instance)
+    vertex_path, cost, _, edge_path = solve(graph, matrix, ga_instance)
     ga_instance.plot_fitness()
 
     print(f"The best solution fitness is {cost}")
-    print(f"The Postman's paths is: {path_vertices}")
-    print(f"which is {len(path_vertices) + 1} vertices")
-    u = set(path_vertices)
-    print(f"total retraversals: {len(path_vertices) - len(u)} ")
+    print(f"The Postman's paths is: {vertex_path}")
+    print(f"which contains {len(vertex_path)} vertices")
+    print(edge_path)
+    # u = set(vertex_path)
+    # print(f"total retraversals: {len(vertex_path) - len(u)} ")
 
 
 if __name__ == "__main__":

@@ -31,7 +31,7 @@ def _fitness(graph: igraph.Graph, matrix: PathMatrix, solution, solution_index):
 def create_template_ga_instance(
         graph: igraph.Graph,
         matrix: PathMatrix,
-        population_size=50, num_generations=5000, crossover_probability=0.98, mutation_probability=0.5,
+        population_size=50, num_generations=300, crossover_probability=0.98, mutation_probability=0.5,
         **kwargs
 ):
     num_genes = graph.ecount()
@@ -59,7 +59,7 @@ def _interpret_ga_solution(graph: igraph.Graph, matrix: PathMatrix, solution):
     # phenotype = [graph.edge for v in genotype]
 
     cost = -solution[1]
-    path = []
+    edge_path = []
 
     first_edge_id = genotype[0]
     first_edge = graph.es[first_edge_id]
@@ -71,27 +71,36 @@ def _interpret_ga_solution(graph: igraph.Graph, matrix: PathMatrix, solution):
 
         if from_vertex_to_source < from_vertex_to_target:
             sub_path = matrix.min_paths[current_vertex, edge.source]
-            target_vertex = edge.source
-            next_vertex = edge.target
+            current_vertex = edge.target
         else:
             sub_path = matrix.min_paths[current_vertex, edge.target]
-            target_vertex = edge.target
-            next_vertex = edge.source
+            current_vertex = edge.source
 
-        path += list(map(lambda e: (graph.es[e].source, graph.es[e].target), sub_path))
-        path.append((target_vertex, next_vertex))
-        current_vertex = next_vertex
+        edge_path += sub_path
+        edge_path.append(edge.index)
 
     final_path = matrix.min_paths[current_vertex, begin_vertex]
-    path += list(map(lambda e: (graph.es[e].source, graph.es[e].target), final_path))
+    edge_path += final_path
 
-    return path, cost, genotype
+    prev_vertex = begin_vertex
+    vertex_path = [prev_vertex]
+    for edge_index in edge_path:
+        edge = graph.es[edge_index]
+        vertex1, vertex2 = edge.source, edge.target
+        if prev_vertex == vertex1:
+            next_vertex = vertex2
+        else:
+            next_vertex = vertex1
+        vertex_path.append(next_vertex)
+        prev_vertex = next_vertex
+    edge_path = list(map(lambda e: (graph.es[e].source, graph.es[e].target), edge_path))
+    return vertex_path, cost, genotype, edge_path
 
 
 def find_path(graph: igraph.Graph, matrix: PathMatrix, ga_instance: pygad.GA):
     ga_instance.run()
-    path, cost, phenotype = _interpret_ga_solution(graph, matrix, ga_instance.best_solution())
-    return path, cost, phenotype
+    vertex_path, cost, phenotype, edge_path = _interpret_ga_solution(graph, matrix, ga_instance.best_solution())
+    return vertex_path, cost, phenotype, edge_path
 
 
 def create_matrix(graph: igraph.Graph):
@@ -107,6 +116,6 @@ def solve(
         matrix = create_matrix(graph)
     if ga_instance is None:
         ga_instance = create_template_ga_instance(graph, matrix)
-    path, cost, _ = find_path(graph, matrix, ga_instance)
-    return path, cost
+    vertex_path, cost, phenotype, edge_path = find_path(graph, matrix, ga_instance)
+    return vertex_path, cost, phenotype, edge_path
 
