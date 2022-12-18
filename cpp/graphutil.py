@@ -2,6 +2,7 @@ from enum import Enum
 import random
 from typing import Optional
 import igraph
+import numpy
 
 
 class GraphType(str, Enum):
@@ -17,6 +18,66 @@ class GraphType(str, Enum):
             return GraphType.half_euler
         else:
             return GraphType.generic
+
+
+# todo: optimize evaluation (see Floyd-Warshall's algorithm)
+class PathMatrix:
+    def __init__(self, graph: igraph.Graph, output="epath", vertices: list[int] | None = None):
+        if vertices is None:
+            vertices = list(range(graph.vcount()))
+        self.__vertices = vertices
+        num_vertices = len(self.__vertices)
+
+        self.__min_paths_costs = numpy.ndarray(shape=(num_vertices, num_vertices), dtype=int)
+        self.__min_paths = numpy.ndarray(shape=(num_vertices, num_vertices), dtype=list)
+
+        # for i, v in enumerate(self.__vertices):
+        #     paths = graph.get_shortest_paths(
+        #         v,
+        #         to=self.__vertices[:i+1],
+        #         weights=graph.es["weight"],
+        #         output="epath"
+        #     )
+        #     self.__min_paths.append(paths)
+        #
+        #     distances = numpy.ndarray(shape=(1, num_vertices))
+        #     for j, path in enumerate(paths):
+        #         distance = 0
+        #         for edge in path:
+        #             distance += graph.es[edge]["weight"]
+        #         distances[j] = distance
+        #
+        #     self.__min_paths_costs[v][:] = distances
+
+        # self.__min_paths_costs += numpy.transpose(self.__min_paths_costs)
+
+        # evaluate path cost matrix
+        for i, j in numpy.ndindex(self.__min_paths_costs.shape):
+            paths = graph.get_shortest_paths(
+                self.__vertices[i],
+                to=self.__vertices[j],
+                weights=graph.es["weight"],
+                output=output
+            )
+            path = paths[0]
+            distance = 0
+            for edge in path:
+                distance += graph.es[edge]["weight"]
+
+            self.__min_paths_costs[i, j] = distance
+            self.__min_paths[i, j] = path
+
+    @property
+    def min_paths_costs(self):
+        return self.__min_paths_costs
+
+    @property
+    def min_paths(self):
+        return self.__min_paths
+
+    @property
+    def vertices(self):
+        return self.__vertices
 
 
 def make_graph(weighted_edges):
@@ -176,3 +237,10 @@ def create_random_graph(vertices: int, edge_probabilty: float, max_weight: int):
                     edges.append([begin_vertex, end_vertex, weight])
 
     return edges
+
+
+def generate_random_permutations(len_permutation, num_permutations):
+    population = [list(range(len_permutation)) for _ in range(num_permutations)]
+    for solution in population:
+        random.shuffle(solution)
+    return population

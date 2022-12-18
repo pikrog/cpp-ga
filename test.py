@@ -2,8 +2,7 @@ import sys
 import numpy
 
 from cpp.graphutil import read_graph_from_file, GraphType
-from cpp.matrix import OddVerticesPathMatrix
-from cpp.ga import find_euler_transform_by_ga, create_template_ga_instance
+from cpp.ga.euler import OddVerticesPathMatrix, create_template_ga_instance, find_euler_transform
 
 
 def test():
@@ -43,7 +42,7 @@ def test():
                 crossover_probability=crossover_probability,
                 mutation_probability=mutation_probability,
             )
-            _, cost, _ = find_euler_transform_by_ga(matrix, ga_instance)
+            _, cost, _ = find_euler_transform(matrix, ga_instance)
             test_results.append(cost)
         all_test_results.append(test_results)
 
