@@ -4,43 +4,55 @@ import numpy
 import igraph
 from pygad import pygad
 
-from cpp.ga.util import pmx_crossover, mutate_by_swap
+from cpp.ga.util import pmx_crossover, mutate_by_swap, random_select_elements, abs_pmx_crossover
 from cpp.graphutil import generate_random_permutations, PathMatrix
 
 
 def _fitness(graph: igraph.Graph, matrix: PathMatrix, solution, solution_index):
     total_cost = 0
     first_edge_id = solution[0]
-    begin_vertex = graph.es[first_edge_id].source
+    begin_vertex = graph.es[abs(first_edge_id) - 1].source
     current_vertex = begin_vertex
     for i, edge_id in enumerate(solution):
-        edge = graph.es[edge_id]
+        edge = graph.es[abs(edge_id) - 1]
         from_vertex_to_source = matrix.min_paths_costs[current_vertex, edge.source]
         from_vertex_to_target = matrix.min_paths_costs[current_vertex, edge.target]
-        if from_vertex_to_source < from_vertex_to_target:
+
+        if (from_vertex_to_source < from_vertex_to_target
+                or (from_vertex_to_source == from_vertex_to_target and edge_id > 0)):
             current_vertex = edge.target
             total_cost += from_vertex_to_source
         else:
             current_vertex = edge.source
             total_cost += from_vertex_to_target
+
         total_cost += edge["weight"]
     total_cost += matrix.min_paths_costs[current_vertex, begin_vertex]
-    return -total_cost
+    return 1/total_cost
+
+
+def _generate_random_solutions(num_genes, population_size):
+    solutions = numpy.array(generate_random_permutations(num_genes, population_size))
+    solutions += 1
+    selected_to_negate = random_select_elements(threshold=0.5, size=(population_size, num_genes))
+    solutions[selected_to_negate] *= -1
+    return solutions
 
 
 def create_template_ga_instance(
         graph: igraph.Graph,
         matrix: PathMatrix,
-        population_size=50, num_generations=300, crossover_probability=0.98, mutation_probability=0.5,
+        population_size=30, num_generations=1500, crossover_probability=0.9, mutation_probability=0.022,
+        num_parents_mating=25,
         **kwargs
 ):
     num_genes = graph.ecount()
     initial_population = generate_random_permutations(num_genes, population_size)
     return pygad.GA(
         num_generations=num_generations,
-        num_parents_mating=population_size // 2,
+        num_parents_mating=num_parents_mating,
         crossover_probability=crossover_probability,
-        crossover_type=pmx_crossover,
+        crossover_type=abs_pmx_crossover,
         mutation_probability=mutation_probability,
         mutation_percent_genes="default",
         mutation_type=mutate_by_swap,
@@ -58,29 +70,37 @@ def _interpret_ga_solution(graph: igraph.Graph, matrix: PathMatrix, solution):
     genotype = [gene for gene in solution[0]]
     # phenotype = [graph.edge for v in genotype]
 
-    cost = -solution[1]
+    # cost = -solution[1]
+    cost = 0
     edge_path = []
 
     first_edge_id = genotype[0]
-    first_edge = graph.es[first_edge_id]
+    first_edge = graph.es[abs(first_edge_id) - 1]
     current_vertex = begin_vertex = first_edge.source
     for i, edge_id in enumerate(genotype):
-        edge = graph.es[edge_id]
+        edge = graph.es[abs(edge_id) - 1]
         from_vertex_to_source = matrix.min_paths_costs[current_vertex, edge.source]
         from_vertex_to_target = matrix.min_paths_costs[current_vertex, edge.target]
 
-        if from_vertex_to_source < from_vertex_to_target:
+        if (from_vertex_to_source < from_vertex_to_target
+                or (from_vertex_to_source == from_vertex_to_target and edge_id > 0)):
             sub_path = matrix.min_paths[current_vertex, edge.source]
+            sub_path_cost = from_vertex_to_source
             current_vertex = edge.target
         else:
             sub_path = matrix.min_paths[current_vertex, edge.target]
+            sub_path_cost = from_vertex_to_target
             current_vertex = edge.source
 
         edge_path += sub_path
+        cost += sub_path_cost
         edge_path.append(edge.index)
+        cost += edge["weight"]
 
     final_path = matrix.min_paths[current_vertex, begin_vertex]
+    final_path_cost = matrix.min_paths_costs[current_vertex, begin_vertex]
     edge_path += final_path
+    cost += final_path_cost
 
     prev_vertex = begin_vertex
     vertex_path = [prev_vertex]
