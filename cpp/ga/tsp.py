@@ -12,12 +12,12 @@ def _get_vertexes(edge, edge_id):
     return (edge.source, edge.target) if edge_id > 0 else (edge.target, edge.source)
 
 
-def _fitness(graph: igraph.Graph, matrix: PathMatrix, solution, solution_index):
+def _fitness(graph: igraph.Graph, matrix: PathMatrix, solution: list[int]):
     total_cost = 0
     first_edge_id = solution[0]
     begin_vertex = graph.es[abs(first_edge_id) - 1].source
     current_vertex = begin_vertex
-    for i, edge_id in enumerate(solution):
+    for edge_id in solution:
         edge = graph.es[abs(edge_id) - 1]
         target_vertex, next_vertex = _get_vertexes(edge, edge_id)
         total_cost += matrix.min_paths_costs[current_vertex, target_vertex]
@@ -52,7 +52,7 @@ def create_template_ga_instance(
         mutation_probability=mutation_probability,
         mutation_percent_genes="default",
         mutation_type=mutate_by_swap,
-        fitness_func=lambda sol, index: _fitness(graph, matrix, sol, index),
+        fitness_func=lambda sol, index: _fitness(graph, matrix, sol),
         parent_selection_type="rws",  # roulette
         initial_population=initial_population,
         keep_elitism=2,
