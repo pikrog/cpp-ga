@@ -25,7 +25,7 @@ def main():
     # return
     while True:
         ga_instance = create_template_ga_instance(graph, matrix)
-        vertex_path, cost, _, edge_path = solve(graph, matrix, ga_instance)
+        vertex_path, cost, edge_path = solve(graph, matrix, ga_instance)
         #ga_instance.plot_fitness()
 
         print(f"The best solution path cost is {cost}")

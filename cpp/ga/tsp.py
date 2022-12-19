@@ -8,6 +8,10 @@ from cpp.ga.util import pmx_crossover, mutate_by_swap, random_select_elements, a
 from cpp.graphutil import generate_random_permutations, PathMatrix
 
 
+def _get_vertexes(edge, edge_id):
+    return (edge.source, edge.target) if edge_id > 0 else (edge.target, edge.source)
+
+
 def _fitness(graph: igraph.Graph, matrix: PathMatrix, solution, solution_index):
     total_cost = 0
     first_edge_id = solution[0]
@@ -15,18 +19,10 @@ def _fitness(graph: igraph.Graph, matrix: PathMatrix, solution, solution_index):
     current_vertex = begin_vertex
     for i, edge_id in enumerate(solution):
         edge = graph.es[abs(edge_id) - 1]
-        from_vertex_to_source = matrix.min_paths_costs[current_vertex, edge.source]
-        from_vertex_to_target = matrix.min_paths_costs[current_vertex, edge.target]
-
-        if (from_vertex_to_source < from_vertex_to_target
-                or (from_vertex_to_source == from_vertex_to_target and edge_id > 0)):
-            current_vertex = edge.target
-            total_cost += from_vertex_to_source
-        else:
-            current_vertex = edge.source
-            total_cost += from_vertex_to_target
-
+        target_vertex, next_vertex = _get_vertexes(edge, edge_id)
+        total_cost += matrix.min_paths_costs[current_vertex, target_vertex]
         total_cost += edge["weight"]
+        current_vertex = next_vertex
     total_cost += matrix.min_paths_costs[current_vertex, begin_vertex]
     return 1/total_cost
 
@@ -68,9 +64,7 @@ def create_template_ga_instance(
 
 def _interpret_ga_solution(graph: igraph.Graph, matrix: PathMatrix, solution):
     genotype = [gene for gene in solution[0]]
-    # phenotype = [graph.edge for v in genotype]
 
-    # cost = -solution[1]
     cost = 0
     edge_path = []
 
@@ -79,23 +73,16 @@ def _interpret_ga_solution(graph: igraph.Graph, matrix: PathMatrix, solution):
     current_vertex = begin_vertex = first_edge.source
     for i, edge_id in enumerate(genotype):
         edge = graph.es[abs(edge_id) - 1]
-        from_vertex_to_source = matrix.min_paths_costs[current_vertex, edge.source]
-        from_vertex_to_target = matrix.min_paths_costs[current_vertex, edge.target]
-
-        if (from_vertex_to_source < from_vertex_to_target
-                or (from_vertex_to_source == from_vertex_to_target and edge_id > 0)):
-            sub_path = matrix.min_paths[current_vertex, edge.source]
-            sub_path_cost = from_vertex_to_source
-            current_vertex = edge.target
-        else:
-            sub_path = matrix.min_paths[current_vertex, edge.target]
-            sub_path_cost = from_vertex_to_target
-            current_vertex = edge.source
+        target_vertex, next_vertex = _get_vertexes(edge, edge_id)
+        sub_path = matrix.min_paths[current_vertex, target_vertex]
+        sub_path_cost = matrix.min_paths_costs[current_vertex, target_vertex]
 
         edge_path += sub_path
         cost += sub_path_cost
         edge_path.append(edge.index)
         cost += edge["weight"]
+
+        current_vertex = next_vertex
 
     final_path = matrix.min_paths[current_vertex, begin_vertex]
     final_path_cost = matrix.min_paths_costs[current_vertex, begin_vertex]
@@ -114,13 +101,13 @@ def _interpret_ga_solution(graph: igraph.Graph, matrix: PathMatrix, solution):
         vertex_path.append(next_vertex)
         prev_vertex = next_vertex
     edge_path = list(map(lambda e: (graph.es[e].source, graph.es[e].target), edge_path))
-    return vertex_path, cost, genotype, edge_path
+    return vertex_path, cost, edge_path
 
 
 def find_path(graph: igraph.Graph, matrix: PathMatrix, ga_instance: pygad.GA):
     ga_instance.run()
-    vertex_path, cost, phenotype, edge_path = _interpret_ga_solution(graph, matrix, ga_instance.best_solution())
-    return vertex_path, cost, phenotype, edge_path
+    vertex_path, cost, edge_path = _interpret_ga_solution(graph, matrix, ga_instance.best_solution())
+    return vertex_path, cost, edge_path
 
 
 def create_matrix(graph: igraph.Graph):
@@ -136,6 +123,6 @@ def solve(
         matrix = create_matrix(graph)
     if ga_instance is None:
         ga_instance = create_template_ga_instance(graph, matrix)
-    vertex_path, cost, phenotype, edge_path = find_path(graph, matrix, ga_instance)
-    return vertex_path, cost, phenotype, edge_path
+    vertex_path, cost, edge_path = find_path(graph, matrix, ga_instance)
+    return vertex_path, cost, edge_path
 
