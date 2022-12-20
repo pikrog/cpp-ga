@@ -12,7 +12,7 @@ def _decode_gene(graph: igraph.Graph, gene: int):
     return edge, source, target
 
 
-def _fitness(graph: igraph.Graph, matrix: PathMatrix, solution):
+def _fitness(graph: igraph.Graph, matrix: PathMatrix, solution: list[int]):
     total_cost = 0
     first_edge_id = solution[0]
     begin_vertex = graph.es[abs(first_edge_id) - 1].source
