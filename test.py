@@ -2,7 +2,7 @@ import sys
 import numpy
 
 from cpp.graphutil import read_graph_from_file, GraphType
-from cpp.ga.euler import OddVerticesPathMatrix, create_template_ga_instance, find_euler_transform
+from cpp.ga.euler import create_template_ga_instance, find_euler_transform, create_matrix
 
 
 def test():
@@ -17,7 +17,7 @@ def test():
     assert(GraphType.of(graph) is GraphType.generic)
     assert(graph.is_connected())
 
-    matrix = OddVerticesPathMatrix(graph)
+    matrix = create_matrix(graph)
 
     test_repeats = 10
     all_test_results = []
