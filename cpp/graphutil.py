@@ -80,7 +80,7 @@ class PathMatrix:
         return self.__vertices
 
 
-def make_graph(weighted_edges):
+def make_graph(weighted_edges: list[list[int]]):
     edges = [edge[0:2] for edge in weighted_edges]
     weights = [edge[2] for edge in weighted_edges]
 
@@ -90,7 +90,7 @@ def make_graph(weighted_edges):
     )
 
 
-def read_graph_from_file(path):
+def read_graph_from_file(path: str):
     with open(path) as file:
         lines = file.readlines()
         weighted_edges = []
@@ -102,7 +102,7 @@ def read_graph_from_file(path):
         return make_graph(weighted_edges)
 
 
-def duplicate_edges_on_paths(graph, paths):
+def duplicate_edges_on_paths(graph: igraph.Graph, paths: list[list[int]]):
     new_edges = []
     new_graph = graph.copy()
     for edge_indices in paths:
@@ -219,7 +219,7 @@ def fix_half_euler_graph(graph: igraph.Graph) -> igraph.Graph:
     return graph
 
 
-def create_random_graph(vertices: int, edge_probabilty: float, max_weight: int):
+def create_random_graph(vertices: int, edge_probability: float, max_weight: int):
     edges = []
 
     for begin_vertex in range(0, vertices):
@@ -231,7 +231,7 @@ def create_random_graph(vertices: int, edge_probabilty: float, max_weight: int):
                 continue
             else:
                 prob = random.random()
-                if prob <= edge_probabilty:
+                if prob <= edge_probability:
                     edge_count += 1
                     weight = random.choice(range(1, max_weight))
                     edges.append([begin_vertex, end_vertex, weight])
@@ -239,8 +239,37 @@ def create_random_graph(vertices: int, edge_probabilty: float, max_weight: int):
     return edges
 
 
-def generate_random_permutations(len_permutation, num_permutations):
+def generate_random_permutations(len_permutation: int, num_permutations: int):
     population = [list(range(len_permutation)) for _ in range(num_permutations)]
     for solution in population:
         random.shuffle(solution)
     return population
+
+
+def edge_to_vertex_path(edges: list[tuple[int, int]], begin_vertex: int = None):
+    if begin_vertex is None:
+        begin_vertex = edges[0][0]
+
+    # check if it's possible to traverse all edges when starting from begin vertex
+    current_vertex = begin_vertex
+    for edge in edges:
+        if current_vertex == edge[0]:
+            current_vertex = edge[1]
+        elif current_vertex == edge[1]:
+            current_vertex = edge[0]
+        else:
+            begin_vertex = edges[0][1] if begin_vertex == edges[0][0] else edges[0][0]
+            break
+
+    prev_vertex = begin_vertex
+    vertex_path = [prev_vertex]
+    for edge in edges:
+        vertex1, vertex2 = edge
+        if prev_vertex == vertex1:
+            next_vertex = vertex2
+        else:
+            next_vertex = vertex1
+        vertex_path.append(next_vertex)
+        prev_vertex = next_vertex
+
+    return vertex_path

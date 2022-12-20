@@ -2,43 +2,9 @@ import igraph
 import numpy
 import pygad
 
-from cpp.ga.util import mutate_by_swap, try_select
+from cpp.ga.util import mutate_by_swap_per_chromosome, try_select
 from cpp.graphutil import GraphType, fix_half_euler_graph, duplicate_edges_on_paths, fleury, \
     generate_random_permutations, PathMatrix
-
-
-# class OddVerticesPathMatrix:
-#     def __init__(self, graph: igraph.Graph):
-#         # find odd vertices
-#         vertices = list(range(graph.vcount()))
-#         self.__odd_vertices = list(filter(lambda v: graph.degree(v) % 2 != 0, vertices))
-#         num_odd = len(self.__odd_vertices)
-#
-#         # initialize matrix
-#         self.__min_paths = numpy.ndarray(shape=(num_odd, num_odd), dtype=tuple)
-#
-#         # evaluate path cost matrix
-#         for i, j in numpy.ndindex(self.__min_paths.shape):
-#             paths = graph.get_shortest_paths(
-#                 self.__odd_vertices[i],
-#                 to=self.__odd_vertices[j],
-#                 weights=graph.es["weight"],
-#                 output="epath"
-#             )
-#             path = paths[0]
-#             distance = 0
-#             for edge in path:
-#                 distance += graph.es[edge]["weight"]
-#
-#             self.__min_paths[i, j] = (distance, path)
-#
-#     @property
-#     def min_paths(self):
-#         return self.__min_paths
-#
-#     @property
-#     def odd_vertices(self):
-#         return self.__odd_vertices
 
 
 def _evaluate_element_indices(pair_index):
@@ -63,7 +29,7 @@ def _insert_pair(source, target, pair_index):
     return target
 
 
-def _fitness(matrix, solution, solution_index):
+def _fitness(matrix, solution):
     total_cost = 0
     for pair_index in range(len(solution) // 2):
         pair_begin, pair_end = _evaluate_element_indices(pair_index)
@@ -124,8 +90,8 @@ def create_template_ga_instance(
         crossover_type=_crossover,
         mutation_probability=mutation_probability,
         mutation_percent_genes="default",
-        mutation_type=mutate_by_swap,
-        fitness_func=lambda sol, index: _fitness(matrix, sol, index),
+        mutation_type=mutate_by_swap_per_chromosome,
+        fitness_func=lambda sol, index: _fitness(matrix, sol),
         parent_selection_type="rws",  # roulette
         initial_population=initial_population,
         keep_elitism=2,
