@@ -1,3 +1,5 @@
+import line_profiler
+
 import igraph
 import numpy
 from pygad import pygad
