@@ -52,7 +52,6 @@ def abs_pmx_insert(parent1: list[int], parent2: list[int], segment_begin: int, s
 
     copied_genes = set(map(abs, parent1_segment))
 
-    # abs_parent1 = list(map(abs, parent1))
     abs_parent2 = list(map(abs, parent2))
 
     parent2_indices = [0] * (len(parent2) + 1)
@@ -116,9 +115,15 @@ def pmx_crossover(parents: numpy.array, offspring_size: tuple[int, int], ga_inst
 
 
 def mutate_by_negation_or_swap(offspring: numpy.array, ga_instance: pygad.GA):
+    return mutate_proxy(offspring, ga_instance)
+
+
+#@profile
+def mutate_proxy(offspring, ga_instance):
+    selections = numpy.random.uniform(size=offspring.shape)
     for chromosome_index in range(offspring.shape[0]):
         for gene_index_1, gene_1 in enumerate(offspring[chromosome_index]):
-            if not try_select(threshold=ga_instance.mutation_probability):
+            if selections[chromosome_index, gene_index_1] > ga_instance.mutation_probability:
                 continue
 
             if try_select(threshold=0.5):
