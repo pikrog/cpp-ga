@@ -50,10 +50,7 @@ def abs_pmx_insert(parent1: list[int], parent2: list[int], segment_begin: int, s
 
     child[segment_begin:segment_end] = parent1_segment
 
-    # copied_genes = set(map(abs, parent1_segment))
-    copied_genes = [False] * (len(parent2) + 1)
-    for gene in parent1_segment:
-        copied_genes[abs(gene)] = True
+    copied_genes = set(map(abs, parent1_segment))
 
     # abs_parent1 = list(map(abs, parent1))
     abs_parent2 = list(map(abs, parent2))
@@ -64,7 +61,7 @@ def abs_pmx_insert(parent1: list[int], parent2: list[int], segment_begin: int, s
 
     for i, gene in enumerate(parent2_segment, start=segment_begin):
         abs_gene = abs(gene)
-        if copied_genes[abs_gene] is True:
+        if abs_gene not in copied_genes:
             continue
         candidate_in_segment = True
         while candidate_in_segment:
@@ -73,9 +70,9 @@ def abs_pmx_insert(parent1: list[int], parent2: list[int], segment_begin: int, s
             candidate_in_segment = segment_begin <= i < segment_end
 
         child[i] = gene
-        copied_genes[abs_gene] = True
+        copied_genes.add(abs_gene)
 
-    remaining_genes = (gene for gene in parent2 if copied_genes[abs(gene)] is False)
+    remaining_genes = (gene for gene in parent2 if abs(gene) not in copied_genes)
 
     for i in range(len(child)):
         if child[i] is None:
