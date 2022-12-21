@@ -1,3 +1,5 @@
+from enum import Enum
+
 import numpy
 import pygad
 
@@ -118,22 +120,31 @@ def mutate_by_negation_or_swap(offspring: numpy.array, ga_instance: pygad.GA):
     return mutate_proxy(offspring, ga_instance)
 
 
-#@profile
+# @profile
 def mutate_proxy(offspring, ga_instance):
-    selections = numpy.random.uniform(size=offspring.shape)
-    for chromosome_index in range(offspring.shape[0]):
-        for gene_index_1, gene_1 in enumerate(offspring[chromosome_index]):
-            if selections[chromosome_index, gene_index_1] > ga_instance.mutation_probability:
-                continue
+    chances = numpy.random.uniform(size=offspring.shape)
+    swapped_genes = numpy.random.uniform(size=offspring.shape) <= 0.5
+    genes_to_mutate = chances <= ga_instance.mutation_probability
+    genes_to_swap = numpy.full(shape=offspring.shape, fill_value=False, dtype=bool)
+    genes_to_swap[genes_to_mutate] = swapped_genes[genes_to_mutate]
+    genes_to_negate = numpy.full(shape=offspring.shape, fill_value=False, dtype=bool)
+    genes_to_negate[genes_to_mutate] = ~swapped_genes[genes_to_mutate]
+    offspring[genes_to_negate] *= -1
+    num_genes_to_swap = numpy.count_nonzero(genes_to_swap)
+    base_swap_indices = numpy.argwhere(genes_to_swap == True)
+    random_swap_indices = numpy.random.choice(range(offspring.shape[1]), size=num_genes_to_swap)
+    for i, (x, y) in enumerate(base_swap_indices):
+        offspring[x, random_swap_indices[i]], offspring[x, y] = offspring[x, y], offspring[x, random_swap_indices[i]]
 
-            if try_select(threshold=0.5):
-                gene_index_2 = numpy.random.choice(range(offspring.shape[1]))
-                gene_2 = offspring[chromosome_index, gene_index_2]
-
-                offspring[chromosome_index, gene_index_1] = gene_2
-                offspring[chromosome_index, gene_index_2] = gene_1
-            else:
-                offspring[chromosome_index, gene_index_1] *= -1
+    # offspring[~swap_indices] *= -1
+    # for chromosome_index in range(offspring.shape[0]):
+    #     for gene_index_1, gene_1 in enumerate(offspring[chromosome_index]):
+    #         if genes_to_swap[chromosome_index, gene_index_1]:
+    #             gene_index_2 = numpy.random.choice(range(offspring.shape[1]))
+    #             gene_2 = offspring[chromosome_index, gene_index_2]
+    #
+    #             offspring[chromosome_index, gene_index_1] = gene_2
+    #             offspring[chromosome_index, gene_index_2] = gene_1
 
     return offspring
 
