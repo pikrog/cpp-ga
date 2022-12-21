@@ -15,8 +15,6 @@ def main():
         print("usage: python main_tsp.py <graph_file>")
         exit(-1)
 
-
-
     graph = read_graph_from_file(graph_file)
     matrix = create_matrix(graph)
 
