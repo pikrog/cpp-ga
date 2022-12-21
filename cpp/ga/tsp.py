@@ -18,7 +18,8 @@ def _fitness(graph: igraph.Graph, matrix: PathMatrix, solution: list[int]):
     begin_vertex = graph.es[abs(first_edge_id) - 1].source
     current_vertex = begin_vertex
     for gene in solution:
-        edge, target_vertex, next_vertex = _decode_gene(graph, gene)
+        edge = graph.es[abs(gene) - 1]
+        target_vertex, next_vertex = (edge.source, edge.target) if gene > 0 else (edge.target, edge.source)
         total_cost += matrix.min_paths_costs[current_vertex, target_vertex]
         total_cost += edge["weight"]
         current_vertex = next_vertex

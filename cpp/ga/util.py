@@ -13,7 +13,7 @@ def random_select_elements(threshold: float, size: tuple, low=0.0, high=1.0):
 
 
 def pmx_insert(parent1: list[int], parent2: list[int], segment_begin: int, segment_end: int):
-    child = [None] * len(parent1)
+    child: list[int | None] = [None] * len(parent1)
 
     parent1_segment = parent1[segment_begin:segment_end]
     parent2_segment = parent2[segment_begin:segment_end]
@@ -43,7 +43,7 @@ def pmx_insert(parent1: list[int], parent2: list[int], segment_begin: int, segme
 
 
 def abs_pmx_insert(parent1: list[int], parent2: list[int], segment_begin: int, segment_end: int):
-    child = [None] * len(parent1)
+    child: list[int | None] = [None] * len(parent1)
 
     parent1_segment = parent1[segment_begin:segment_end]
     parent2_segment = parent2[segment_begin:segment_end]
@@ -52,7 +52,12 @@ def abs_pmx_insert(parent1: list[int], parent2: list[int], segment_begin: int, s
 
     copied_genes = set(map(abs, parent1_segment))
 
+    # abs_parent1 = list(map(abs, parent1))
     abs_parent2 = list(map(abs, parent2))
+
+    parent2_indices = [0] * (len(parent2) + 1)
+    for i in range(len(parent2)):
+        parent2_indices[abs_parent2[i]] = i
 
     for i, gene in enumerate(parent2_segment, start=segment_begin):
         abs_gene = abs(gene)
@@ -61,7 +66,7 @@ def abs_pmx_insert(parent1: list[int], parent2: list[int], segment_begin: int, s
         candidate_in_segment = True
         while candidate_in_segment:
             candidate_gene = parent1[i]
-            i = abs_parent2.index(abs(candidate_gene))
+            i = parent2_indices[abs(candidate_gene)]
             candidate_in_segment = segment_begin <= i < segment_end
 
         child[i] = gene
@@ -81,7 +86,7 @@ def abs_pmx_crossover(parents: numpy.array, offspring_size: tuple[int, int], ga_
 
 
 def pmx_crossover(parents: numpy.array, offspring_size: tuple[int, int], ga_instance: pygad.GA, inserter=pmx_insert):
-    offspring = numpy.ndarray(shape=offspring_size)
+    offspring = numpy.ndarray(shape=offspring_size, dtype=int)
     offspring_index = 0
     parent_index = 0
 
@@ -95,6 +100,7 @@ def pmx_crossover(parents: numpy.array, offspring_size: tuple[int, int], ga_inst
             continue
 
         parent2_index = numpy.random.randint(0, parents.shape[0], size=1)[0]
+        # parent2_index = parent_index % parents.shape[0]
         parent2 = list(parents[parent2_index, :])
 
         segment_begin = numpy.random.choice(range(offspring_size[1]))
