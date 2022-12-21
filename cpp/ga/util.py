@@ -61,7 +61,7 @@ def abs_pmx_insert(parent1: list[int], parent2: list[int], segment_begin: int, s
 
     for i, gene in enumerate(parent2_segment, start=segment_begin):
         abs_gene = abs(gene)
-        if abs_gene not in copied_genes:
+        if abs_gene in copied_genes:
             continue
         candidate_in_segment = True
         while candidate_in_segment:
