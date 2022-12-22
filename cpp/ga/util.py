@@ -73,11 +73,13 @@ def abs_pmx_insert(parent1: list[int], parent2: list[int], segment_begin: int, s
         child[i] = gene
         copied_genes.add(abs_gene)
 
-    remaining_genes = (gene for gene in parent2 if abs(gene) not in copied_genes)
+    remaining_genes = [gene for i, gene in enumerate(parent2) if abs_parent2[i] not in copied_genes]
 
+    j = 0
     for i in range(len(child)):
         if child[i] is None:
-            child[i] = next(remaining_genes)
+            child[i] = remaining_genes[j]
+            j += 1
 
     return child
 
