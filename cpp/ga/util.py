@@ -44,19 +44,19 @@ def pmx_insert(parent1: list[int], parent2: list[int], segment_begin: int, segme
     return child
 
 
-def abs_pmx_insert(parent1: list[int], parent2: list[int], segment_begin: int, segment_end: int):
-    child: list[int | None] = [None] * len(parent1)
+def abs_pmx_insert(parent1: numpy.array, parent2: numpy.array, segment_begin: int, segment_end: int):
+    child: numpy.array = numpy.zeros(shape=len(parent1), dtype=int)
 
     parent1_segment = parent1[segment_begin:segment_end]
     parent2_segment = parent2[segment_begin:segment_end]
 
     child[segment_begin:segment_end] = parent1_segment
 
-    copied_genes = set(map(abs, parent1_segment))
+    copied_genes = set(numpy.abs(parent1_segment))
 
-    abs_parent2 = list(map(abs, parent2))
+    abs_parent2 = numpy.abs(parent2)
 
-    parent2_indices = [0] * (len(parent2) + 1)
+    parent2_indices = numpy.zeros(shape=len(parent2) + 1, dtype=int)
     for i in range(len(parent2)):
         parent2_indices[abs_parent2[i]] = i
 
@@ -77,7 +77,7 @@ def abs_pmx_insert(parent1: list[int], parent2: list[int], segment_begin: int, s
 
     j = 0
     for i in range(len(child)):
-        if child[i] is None:
+        if child[i] == 0:
             child[i] = remaining_genes[j]
             j += 1
 
@@ -119,11 +119,6 @@ def pmx_crossover(parents: numpy.array, offspring_size: tuple[int, int], ga_inst
 
 
 def mutate_by_negation_or_swap(offspring: numpy.array, ga_instance: pygad.GA):
-    return mutate_proxy(offspring, ga_instance)
-
-
-# @profile
-def mutate_proxy(offspring, ga_instance):
     chances = numpy.random.uniform(size=offspring.shape)
     swapped_genes = numpy.random.uniform(size=offspring.shape) <= 0.5
     genes_to_mutate = chances <= ga_instance.mutation_probability
@@ -137,17 +132,6 @@ def mutate_proxy(offspring, ga_instance):
     random_swap_indices = numpy.random.choice(range(offspring.shape[1]), size=num_genes_to_swap)
     for i, (x, y) in enumerate(base_swap_indices):
         offspring[x, random_swap_indices[i]], offspring[x, y] = offspring[x, y], offspring[x, random_swap_indices[i]]
-
-    # offspring[~swap_indices] *= -1
-    # for chromosome_index in range(offspring.shape[0]):
-    #     for gene_index_1, gene_1 in enumerate(offspring[chromosome_index]):
-    #         if genes_to_swap[chromosome_index, gene_index_1]:
-    #             gene_index_2 = numpy.random.choice(range(offspring.shape[1]))
-    #             gene_2 = offspring[chromosome_index, gene_index_2]
-    #
-    #             offspring[chromosome_index, gene_index_1] = gene_2
-    #             offspring[chromosome_index, gene_index_2] = gene_1
-
     return offspring
 
 
